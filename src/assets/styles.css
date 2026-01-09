@@ -1,0 +1,44 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+}
+
+body {
+  margin: 0;
+  background: #f5f6f8;
+  color: #222;
+}
+
+h1,
+h2 {
+  margin-bottom: 12px;
+}
+
+input,
+select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.card {
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.2s ease;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(5px);
+}
+
+.list-leave-to {
+  opacity: 0;
+}

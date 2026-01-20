@@ -46,11 +46,11 @@ const updateIcon = (e: Event) => {
     </button>
 
     <div class="customization-panel">
-      <label>Цвет</label>
-      <input type="color" :value="wishlist.color" @change="updateColor" />
+      <label for="color-input">Цвет</label>
+      <input id="color-input" type="color" :value="wishlist.color" @change="updateColor" />
 
-      <label>Иконка</label>
-      <select :value="wishlist.icon" @change="updateIcon">
+      <label for="icon-select">Иконка</label>
+      <select id="icon-select" :value="wishlist.icon" @change="updateIcon">
         <option v-for="i in icons" :key="i" :value="i">{{ i }}</option>
       </select>
     </div>

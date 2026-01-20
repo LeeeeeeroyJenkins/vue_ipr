@@ -1,24 +1,12 @@
 import { defineStore } from "pinia";
 import type { Wishlist, WishlistItem } from "../types/wishlist";
+import { useLocalStorage } from "../composables/useLocalStorage";
 
 const STORAGE_KEY = "wishlists";
 
-let saveTimeout: number | null = null;
-const debouncedSave = (wishlists: Wishlist[]) => {
-  if (saveTimeout !== null) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(wishlists));
-    } catch (e) {
-      // для прод версии
-    }
-    saveTimeout = null;
-  }, 300);
-};
-
 export const useWishlistStore = defineStore("wishlist", {
   state: () => ({
-    wishlists: [] as Wishlist[],
+    wishlists: useLocalStorage<Wishlist[]>(STORAGE_KEY, []),
     search: "",
   }),
   getters: {
@@ -40,66 +28,7 @@ export const useWishlistStore = defineStore("wishlist", {
       });
     },
   },
-
   actions: {
-    init() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw) || [];
-          this.wishlists = parsed.map((w: any) => ({
-            id: w.id || crypto.randomUUID(),
-            title: w.title || "Untitled",
-            theme: w.theme || "default",
-            color: w.color || "#ffffff",
-            icon: w.icon || "🎁",
-            cover: w.cover || "",
-            items: (w.items || []).map(
-              (i: any): WishlistItem => ({
-                id: i.id || crypto.randomUUID(),
-                title: i.title || i.name || "Untitled Item",
-                link: i.link || i.url || "",
-                description: i.description || i.notes || "",
-                price:
-                  typeof i.price === "number"
-                    ? i.price
-                    : parseFloat(i.price) || 0,
-                image: i.image || "",
-                purchased: !!i.purchased,
-              })
-            ),
-          })) as Wishlist[];
-        } catch (e) {
-          this.wishlists = [];
-        }
-      } else {
-        this.wishlists = [];
-      }
-    },
-    saveLocalStorage() {
-      debouncedSave(this.wishlists);
-    },
-    createWishlist(title: string, theme: Wishlist["theme"], icon?: string) {
-      const themeIcons: Record<Wishlist["theme"], string> = {
-        default: "🎁",
-        birthday: "🎂",
-        newyear: "🎄",
-      };
-
-      const finalIcon = icon || themeIcons[theme] || "🎁";
-
-      this.wishlists.push({
-        id: crypto.randomUUID(),
-        title,
-        theme,
-        color: "#ffffff",
-        icon: finalIcon,
-        cover: "",
-        items: [],
-      });
-
-      this.saveLocalStorage();
-    },
     updateWishlistImmediate(id: string, patch: Partial<Wishlist>) {
       const wl = this.getWishlist(id);
       if (!wl) return;
@@ -115,13 +44,12 @@ export const useWishlistStore = defineStore("wishlist", {
       if (!wl) return;
       Object.assign(wl, patch);
       this.wishlists = [...this.wishlists];
-      if (!("color" in patch) && !("cover" in patch)) {
-        this.saveLocalStorage();
+      if ("color" in patch || "cover" in patch) {
+        this.updateWishlistImmediate(id, patch);
       }
     },
     deleteWishlist(id: string) {
       this.wishlists = this.wishlists.filter((w) => w.id !== id);
-      this.saveLocalStorage();
     },
     addItem(wishlistId: string, item: Omit<WishlistItem, "id" | "purchased">) {
       const wl = this.getWishlist(wishlistId);
@@ -131,7 +59,7 @@ export const useWishlistStore = defineStore("wishlist", {
         purchased: false,
         ...item,
       });
-      this.saveLocalStorage();
+      this.wishlists = [...this.wishlists];
     },
     updateItem(
       wishlistId: string,
@@ -143,13 +71,13 @@ export const useWishlistStore = defineStore("wishlist", {
       const item = wl.items.find((i) => i.id === itemId);
       if (!item) return;
       Object.assign(item, patch);
-      this.saveLocalStorage();
+      this.wishlists = [...this.wishlists];
     },
     removeItem(wishlistId: string, itemId: string) {
       const wl = this.getWishlist(wishlistId);
       if (!wl) return;
       wl.items = wl.items.filter((i) => i.id !== itemId);
-      this.saveLocalStorage();
+      this.wishlists = [...this.wishlists];
     },
     togglePurchased(wishlistId: string, itemId: string) {
       const wl = this.getWishlist(wishlistId);
@@ -158,7 +86,7 @@ export const useWishlistStore = defineStore("wishlist", {
       if (!item) return;
       item.purchased = !item.purchased;
       wl.items.sort((a, b) => Number(a.purchased) - Number(b.purchased));
-      this.saveLocalStorage();
+      this.wishlists = [...this.wishlists];
     },
     reorderItems(wishlistId: string, fromIndex: number, toIndex: number) {
       const wl = this.getWishlist(wishlistId);
@@ -167,7 +95,19 @@ export const useWishlistStore = defineStore("wishlist", {
       if (item) {
         wl.items.splice(toIndex, 0, item);
       }
-      this.saveLocalStorage();
+      this.wishlists = [...this.wishlists];
+    },
+    createWishlist(title: string, theme: Wishlist['theme'], icon: string) {
+      const newWishlist: Wishlist = {
+        id: crypto.randomUUID(),
+        title,
+        theme,
+        color: "#ffffff",
+        icon,
+        cover: "",
+        items: [],
+      };
+      this.wishlists.push(newWishlist);
     },
     getWishlist(id: string) {
       return this.wishlists.find((w) => w.id === id);

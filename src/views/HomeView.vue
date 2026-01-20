@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import { useWishlistStore } from '../stores/wishlist.store'
 import WishlistCard from '../components/wishlist/WishlistCard.vue'
 import WishlistCreateModal from '../components/wishlist/WishlistCreateModal.vue'
@@ -7,9 +6,6 @@ import WishlistSearch from '../components/wishlist/WishlistSearch.vue'
 
 const store = useWishlistStore()
 
-onMounted(() => {
-  store.init()
-})
 </script>
 
 <template>
@@ -26,7 +22,8 @@ onMounted(() => {
     </TransitionGroup>
 
     <div v-if="!store.filteredWishlists.length" class="empty-state">
-      <p>Нет вишлистов. Создайте первый!</p>
+      <p v-if="!store.search.trim()">Нет вишлистов. Создайте первый!</p>
+      <p v-else>Ничего не найдено по запросу "{{ store.search }}". Попробуйте другой поиск.</p>
     </div>
   </div>
 </template>

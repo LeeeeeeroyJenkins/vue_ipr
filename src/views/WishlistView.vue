@@ -14,9 +14,8 @@ const wishlistId = route.params.id as string
 const wishlist = computed(() => store.getWishlist(wishlistId))
 
 onMounted(() => {
-  store.init()
   if (!wishlist.value) {
-    router.push('/wishlists')
+    router.push('/')
   }
 })
 </script>

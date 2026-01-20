@@ -15,6 +15,15 @@ const price = ref<number | null>(null);
 const selectedFile = ref<File | null>(null);
 const fileName = ref("");
 
+async function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function onFileChange(e: Event) {
     const target = e.target as HTMLInputElement;
     const file = target.files?.[0] || null;
@@ -22,7 +31,7 @@ function onFileChange(e: Event) {
     fileName.value = file?.name || "";
 }
 
-function save() {
+async function save() {
     if (!title.value.trim()) return;
 
     const newItem: Omit<WishlistItem, "id" | "purchased"> = {
@@ -32,16 +41,14 @@ function save() {
         price: price.value || undefined,
     };
 
-    if (selectedFile.value) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            newItem.image = e.target?.result as string;
-            store.addItem(props.wishlistId, newItem);
-            resetForm();
-        };
-        reader.readAsDataURL(selectedFile.value);
-    } else {
+    try {
+        if (selectedFile.value) {
+            newItem.image = await readFileAsDataURL(selectedFile.value);
+        }
         store.addItem(props.wishlistId, newItem);
+    } catch (error) {
+        console.error('Error adding item:', error);
+    } finally {
         resetForm();
     }
 }
@@ -64,46 +71,58 @@ function resetForm() {
 
             <h3 class="modal-title">Добавить элемент</h3>
 
-            <label class="form-label">Название</label>
-            <input v-model="title" placeholder="Название" class="form-input" />
+            <label class="form-label" for="title-input">Название</label>
+            <input id="title-input" v-model="title" placeholder="Название" class="form-input" />
 
-            <label class="form-label">Описание</label>
-            <textarea v-model="description" placeholder="Описание" class="form-textarea"></textarea>
+            <label class="form-label" for="description-input">Описание</label>
+            <textarea id="description-input" v-model="description" placeholder="Описание" class="form-textarea"></textarea>
 
-            <label class="form-label">Ссылка</label>
-            <input v-model="link" placeholder="Ссылка" class="form-input" />
+            <label class="form-label" for="link-input">Ссылка</label>
+            <input id="link-input" v-model="link" placeholder="Ссылка" class="form-input" />
 
-            <label class="form-label">Цена</label>
-            <input v-model.number="price" type="number" placeholder="Цена" class="form-input" />
+            <label class="form-label" for="price-input">Цена</label>
+            <input id="price-input" v-model.number="price" type="number" placeholder="Цена" class="form-input" />
 
-            <label class="form-label">Изображение</label>
-            <input type="file" accept="image/*" @change="onFileChange" class="form-input" />
-            <div v-if="fileName" class="file-preview">
-                {{ fileName }}
-                <button @click="onFileChange({ target: { files: [] } } as any)" class="remove-file">×</button>
+            <label class="form-label" for="image-input">Изображение</label>
+            <input id="image-input" type="file" @change="onFileChange" accept="image/*" />
+
+            <div v-if="selectedFile" class="file-preview">
+                <span>{{ fileName }}</span>
+                <button @click="selectedFile = null; fileName = ''" class="remove-file">Удалить</button>
             </div>
 
-            <button @click="save" class="save-btn">Добавить</button>
+            <button @click="save" class="save-btn">Сохранить</button>
         </div>
     </Modal>
 </template>
 
 <style scoped>
 .add-btn {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: #3b82f6;
     color: white;
     border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1.1rem;
-    font-weight: bold;
-    transition: transform 0.2s ease, background 0.3s ease;
+    margin-bottom: 16px;
 }
 
-.add-btn:hover {
-    transform: translateY(-2px);
-    background: linear-gradient(135deg, #2563eb, #1e40af);
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.modal {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    min-width: 320px;
+    max-width: 90%;
 }
 
 .modal-wrapper {
@@ -154,6 +173,7 @@ function resetForm() {
     font-size: 1rem;
     color: #111827;
     transition: border-color 0.2s;
+    box-sizing: border-box;
 }
 
 .form-input:focus,

@@ -5,14 +5,46 @@ import { useDragAndDrop } from "../../composables/useDragAndDrop";
 
 const props = defineProps<{ wishlist: Wishlist }>();
 const { dragStart, drop, dragEnd, dragging, touchStart, touchEnd } = useDragAndDrop(props.wishlist.id);
+
+function handleDragStart(e: DragEvent) {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains('item-wrapper')) {
+    const index = parseInt(target.dataset.index || '-1');
+    if (index >= 0) {
+      dragStart(index);
+    }
+  }
+}
+
+function handleDragEnd() {
+  dragEnd();
+}
+
+function handleDrop(e: DragEvent) {
+  e.preventDefault();
+  const target = e.target as HTMLElement;
+  let index = -1;
+  if (target.classList.contains('item-wrapper')) {
+    index = parseInt(target.dataset.index || '-1');
+  } else {
+    const wrapper = target.closest('.item-wrapper');
+    if (wrapper) {
+      const wrapperEl = wrapper as HTMLElement;
+      index = parseInt(wrapperEl.dataset.index || '-1');
+    }
+  }
+  if (index >= 0) {
+    drop(index);
+  }
+}
 </script>
 
 <template>
-  <TransitionGroup name="list" class="item-list">
+  <TransitionGroup name="list" class="item-list" @dragstart="handleDragStart" @dragend="handleDragEnd"
+    @drop="handleDrop" @dragover.prevent @dragenter.prevent>
     <div v-for="(item, index) in wishlist.items" :key="item.id" class="item-wrapper" :class="{ dragging: dragging }"
-      draggable="true" @dragstart="dragStart(index)" @dragend="dragEnd" @dragover.prevent @dragenter.prevent
-      @drop.prevent="drop(index)" @touchstart="touchStart($event, index)" @touchend="touchEnd($event, index)"
-      tabindex="0" aria-label="Перетащите элемент">
+      :data-index="index" draggable="true" tabindex="0" aria-label="Перетащите элемент"
+      @touchstart="touchStart($event, index)" @touchend="touchEnd($event, index)">
       <WishlistItem :item="item" :wishlist-id="wishlist.id" />
     </div>
   </TransitionGroup>
